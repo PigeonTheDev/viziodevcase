@@ -169,3 +169,8 @@ scripts/
 - **Clean code:** Separation of concerns, type safety
 - **Performance:** Indexes, Server Components (SSR)
 - **Security mindset:** RLS policies, helper functions
+
+- **TEST USERS**
+  testavengers@test.com Password123
+
+testjusticeleague@test.com Password123
