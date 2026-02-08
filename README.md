@@ -1,53 +1,53 @@
 # Vizio - Team-Based Social Media MVP
 
-Next.js 15 + Supabase ile geliştirilmiş, takım tabanlı sosyal medya platformu. Vizio AI case study projesi.
+Team-based social media platform built with Next.js 15 + Supabase. Vizio AI case study project.
 
 **Tech Stack:** Next.js 15, Supabase, TypeScript, Tailwind CSS
 
-## Özellikler
+## Features
 
 - ✅ **Auth:** Email/password + Google OAuth
-- ✅ **Takım Sistemi:** Her kullanıcı bir takıma ait
-- ✅ **Post Paylaşma:** Takım adına gönderi oluşturma
-- ✅ **Takip Sistemi:** Takımlar birbirini takip edebilir
-- ✅ **Global Feed:** Tüm gönderileri görüntüle (auth gerekmeden)
-- ✅ **RLS Security:** Database seviyesinde yetkilendirme
+- ✅ **Team System:** Each user belongs to one team
+- ✅ **Post Sharing:** Create posts on behalf of your team
+- ✅ **Follow System:** Teams can follow each other
+- ✅ **Global Feed:** View all posts (no auth required)
+- ✅ **RLS Security:** Database-level authorization
 
 ---
 
 ## 🗄️ Database Schema
 
-### Tablolar
+### Tables
 
-**`teams`** - Takım bilgileri
+**`teams`** - Team information
 
 - `id`, `name`, `handle` (unique), `created_at`
 
 **`profiles`** - User → Team mapping
 
 - `user_id` (PK), `team_id` (FK)
-- **1 user = 1 team** (PK ile enforce edilir)
+- **1 user = 1 team** (enforced by PK)
 
-**`posts`** - Takım gönderileri
+**`posts`** - Team posts
 
 - `id`, `team_id`, `content`, `created_at`
-- `user_id` YOK (collaborative posting)
+- NO `user_id` (collaborative posting)
 
-**`team_follows`** - Takip ilişkileri
+**`team_follows`** - Follow relationships
 
 - `follower_team_id`, `followed_team_id`
-- Composite PK, CHECK constraint (self-follow engelleme)
+- Composite PK, CHECK constraint (prevents self-follow)
 
 ### RLS Policies
 
-**Güvenlik Katmanları:**
+**Security Layers:**
 
 1. Database (RLS policies)
 2. Backend (API validation)
 3. Middleware (route protection)
 4. Frontend (UI state)
 
-**Önemli Policies:**
+**Important Policies:**
 
 - `posts`: Public read, team-scoped write
 - `profiles`: Own profile read, write BLOCKED
@@ -55,9 +55,9 @@ Next.js 15 + Supabase ile geliştirilmiş, takım tabanlı sosyal medya platform
 
 **Database Constraints:**
 
-- `teams.handle`: UNIQUE constraint (duplicate handle engelleme)
-- `team_follows`: Composite PK (duplicate follow engelleme)
-- `team_follows`: CHECK constraint → `follower_team_id <> followed_team_id` (self-follow engelleme)
+- `teams.handle`: UNIQUE constraint (prevents duplicate handles)
+- `team_follows`: Composite PK (prevents duplicate follows)
+- `team_follows`: CHECK constraint → `follower_team_id <> followed_team_id` (prevents self-follow)
 - `profiles.user_id`: PK enforcement (1 user = 1 team)
 
 **Helper Function:**
@@ -66,39 +66,39 @@ Next.js 15 + Supabase ile geliştirilmiş, takım tabanlı sosyal medya platform
 my_team_id(uuid) → uuid
 ```
 
-Security definer function, RLS policies'de kullanılır.
+Security definer function, used in RLS policies.
 
 ---
 
-### Provisioning Yaklaşımı
+### Provisioning Approach
 
-**Karar:** Admin provisioning (self-signup YOK)
+**Decision:** Admin provisioning (NO self-signup)
 
-**Nasıl Çalışıyor:**
+**How It Works:**
 
-Script (`scripts/provision.ts`) şu adımları takip eder:
+Script (`scripts/provision.ts`) follows these steps:
 
-1. **User Check:** Email ile mevcut auth user aranır
-   - Varsa: Mevcut user kullanılır
-   - Yoksa: Yeni auth user oluşturulur (`email_confirm: true`)
+1. **User Check:** Search for existing auth user by email
+   - If exists: Use existing user
+   - If not: Create new auth user (`email_confirm: true`)
 
-2. **Team Check:** User'ın zaten team'i var mı kontrol edilir
+2. **Team Check:** Check if user already has a team
 
    ```typescript
    SELECT team_id, teams(name, handle) FROM profiles WHERE user_id = ?
    ```
 
-   - Varsa: **ERROR** - "User already belongs to team X"
-   - Yoksa: Devam edilir
+   - If exists: **ERROR** - "User already belongs to team X"
+   - If not: Continue
 
-3. **Team Upsert:** Handle'a göre team oluşturulur/güncellenir
+3. **Team Upsert:** Create/update team by handle
 
    ```sql
    INSERT INTO teams (name, handle) VALUES (?, ?)
    ON CONFLICT (handle) DO UPDATE SET name = EXCLUDED.name
    ```
 
-4. **Profile Link:** User → Team mapping oluşturulur
+4. **Profile Link:** Create User → Team mapping
 
    ```sql
    INSERT INTO profiles (user_id, team_id) VALUES (?, ?)
@@ -106,21 +106,21 @@ Script (`scripts/provision.ts`) şu adımları takip eder:
 
    - Primary Key violation → Duplicate prevention
 
-5. **(Opsiyonel)** Demo post oluşturulur (`--post` flag)
+5. **(Optional)** Create demo post (`--post` flag)
 
 ### Public Feed
 
-Feed herkes görebilir (auth gerekmez)
+Feed is viewable by everyone (no auth required)
 
 ### 5. Multi-Layer Validation
 
-**Örnek:** Self-follow prevention
+**Example:** Self-follow prevention
 
 - Layer 1: Database CHECK constraint
 - Layer 2: API validation (`targetTeamId !== myTeamId`)
 - Layer 3: Frontend (button hidden)
 
-## 📁 Proje Yapısı
+## 📁 Project Structure
 
 ```
 src/
@@ -147,7 +147,7 @@ scripts/
 
 ---
 
-## What I Would Improve With More Time
+## 🔄 What I Would Improve With More Time
 
 ### High Priority
 
@@ -251,30 +251,7 @@ scripts/
 
 ---
 
-- **Database Detayları:** `database/README.md`
-- **Schema SQL:** `database/schema.sql`
-- **Provision Docs:** `scripts/provision.ts` (inline comments)
-
-### PDF Gereksinimleri
-
-✅ Authentication (email + Google OAuth)  
-✅ Team-based model (1 user = 1 team)  
-✅ Posts (team-owned)  
-✅ Follow system (team-to-team)  
-✅ Global feed (public)  
-✅ RLS policies  
-✅ Clean architecture  
-✅ Documented approach (provisioning)
-
-### Öne Çıkan Noktalar
-
-- **Defense in depth:** Database + Backend + Frontend validation
-- **Production patterns:** Admin provisioning, RLS, cookies
-- **Clean code:** Separation of concerns, type safety
-- **Performance:** Indexes, Server Components (SSR)
-- **Security mindset:** RLS policies, helper functions
-
 - **TEST USERS**
   testavengers@test.com Password123
 
-testjusticeleague@test.com Password123
+  testjusticeleague@test.com Password123
