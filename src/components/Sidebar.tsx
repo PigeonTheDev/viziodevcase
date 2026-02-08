@@ -9,15 +9,45 @@ import SidebarStats from "./SidebarStats";
 
 export default function Sidebar() {
   const [email, setEmail] = useState<string | null>(null);
+  const [teamName, setTeamName] = useState<string | null>(null);
+  const [teamHandle, setTeamHandle] = useState<string | null>(null);
   const [showTooltip, setShowTooltip] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
-    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
+    
+    async function loadUserData() {
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData.user;
+      setEmail(user?.email ?? null);
+      
+      if (user) {
+        // Get team info
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("team_id, teams(name, handle)")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        
+        if (profile?.teams) {
+          const team = Array.isArray(profile.teams) ? profile.teams[0] : profile.teams;
+          setTeamName(team?.name ?? null);
+          setTeamHandle(team?.handle ?? null);
+        }
+      }
+    }
+    
+    loadUserData();
 
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       setEmail(session?.user?.email ?? null);
+      if (session?.user) {
+        loadUserData();
+      } else {
+        setTeamName(null);
+        setTeamHandle(null);
+      }
     });
 
     return () => sub.subscription.unsubscribe();
@@ -119,14 +149,23 @@ export default function Sidebar() {
           <div className="space-y-3">
             <div className="flex items-center gap-3 px-4 py-3 bg-zinc-900/50 rounded-xl border border-zinc-800">
               <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-bold text-sm">{email.charAt(0).toUpperCase()}</span>
+                <span className="text-white font-bold text-sm">{teamName ? teamName.charAt(0).toUpperCase() : email.charAt(0).toUpperCase()}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-white text-sm font-medium truncate">{email}</div>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-zinc-500 text-xs">Çevrimiçi</span>
-                </div>
+                {teamName ? (
+                  <>
+                    <div className="text-white text-sm font-medium truncate">{teamName}</div>
+                    <div className="text-zinc-500 text-xs truncate">@{teamHandle}</div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-white text-sm font-medium truncate">{email}</div>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-zinc-500 text-xs">Çevrimiçi</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
             <button

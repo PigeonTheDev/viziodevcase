@@ -5,6 +5,7 @@ import { useState } from "react";
 export default function NewPost() {
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
+  const [reloading, setReloading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   async function submit() {
@@ -24,6 +25,7 @@ export default function NewPost() {
       if (!res.ok) throw new Error(json.error ?? "Failed");
 
       setContent("");
+      setReloading(true); // Show reload overlay
       window.location.reload();
     } catch (e) {
       if (e instanceof Error) {
@@ -31,14 +33,28 @@ export default function NewPost() {
       } else {
         setMsg("Hata");
       }
-    } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="bg-gradient-to-br from-zinc-900/60 to-zinc-900/30 border border-zinc-800/50 rounded-2xl p-7 mb-8 backdrop-blur-sm shadow-xl">
-      <div className="flex items-center gap-3 mb-5">
+    <>
+      {/* Reload Overlay */}
+      {reloading && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center">
+          <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-8 flex flex-col items-center gap-4">
+            <div className="relative w-16 h-16">
+              <div className="absolute inset-0 border-4 border-zinc-700 rounded-full"></div>
+              <div className="absolute inset-0 border-4 border-transparent border-t-white rounded-full animate-spin"></div>
+            </div>
+            <p className="text-white font-medium">Gönderi paylaşılıyor...</p>
+            <p className="text-zinc-500 text-sm">Feed yenileniyor</p>
+          </div>
+        </div>
+      )}
+      
+      <div className="bg-gradient-to-br from-zinc-900/60 to-zinc-900/30 border border-zinc-800/50 rounded-2xl p-7 mb-8 backdrop-blur-sm shadow-xl">
+        <div className="flex items-center gap-3 mb-5">
         <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center">
           <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path
@@ -90,14 +106,10 @@ export default function NewPost() {
           >
             {loading ? (
               <span className="flex items-center gap-2">
-                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
+                <div className="relative w-4 h-4">
+                  <div className="absolute inset-0 border-2 border-zinc-600 rounded-full"></div>
+                  <div className="absolute inset-0 border-2 border-transparent border-t-black rounded-full animate-spin"></div>
+                </div>
                 Gönderiliyor...
               </span>
             ) : (
@@ -106,6 +118,7 @@ export default function NewPost() {
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

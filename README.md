@@ -145,7 +145,111 @@ scripts/
 └── provision.ts         # User/team provisioning
 ```
 
-## Kaynaklar
+---
+
+## What I Would Improve With More Time
+
+### High Priority
+
+**1. Self-Service Signup Flow**
+
+- Current: Admin provisioning via script
+- Future: Signup wizard with team creation
+- Email verification flow
+- Team invite links (existing members invite new users)
+- Admin role for team management
+
+**2. Optimistic UI Updates**
+
+- Current: Page refresh after mutations
+- Future: Instant UI updates with rollback on error
+- React Query or SWR for cache management
+- Undo actions for follow/unfollow
+
+**3. Pagination**
+
+- Current: Limited to first 20 posts
+- Future: Cursor-based pagination (keyset pagination)
+- Infinite scroll or "Load More" button
+- Efficient for large datasets
+
+**4. Real-Time Feed Updates**
+
+- Current: Manual refresh required
+- Future: Supabase Realtime subscriptions
+- New posts appear automatically
+- Live follow/unfollow updates
+- Online presence indicators
+
+### Medium Priority
+
+**5. Enhanced Content**
+
+- Image uploads (Supabase Storage)
+- Video support
+- Rich text editor (Markdown, mentions, hashtags)
+- Link previews
+- Post reactions/likes
+
+**6. Team Profiles**
+
+- Dedicated team profile pages (`/teams/[handle]`)
+- Team bio, avatar, banner image
+- Team member list with roles
+- Team-specific post feed
+- Team statistics (followers, posts count)
+
+**7. Advanced Following Features**
+
+- Followers count and following count
+- Mutual follows indicator
+- Follow suggestions algorithm
+- Follower-only feed (vs global feed)
+- Block/mute functionality
+
+**8. Performance Optimizations**
+
+- Virtual scrolling for long feeds
+- Image optimization (Next.js Image component)
+- CDN integration for static assets
+- Database query optimization (EXPLAIN ANALYZE)
+- Caching layer (Redis) for hot data
+
+### Nice to Have
+
+**9. Security Enhancements**
+
+- Rate limiting (Upstash Rate Limit)
+- CAPTCHA for authentication
+- Content moderation tools
+- Audit logs for sensitive actions
+- IP-based access control
+
+**10. Analytics & Monitoring**
+
+- Post views and engagement metrics
+- Team growth analytics
+- Error tracking (Sentry)
+- Performance monitoring (Vercel Analytics)
+- Database query performance dashboard
+
+**11. Testing**
+
+- Unit tests (Vitest)
+- Integration tests
+- E2E tests (Playwright) for critical flows
+- Visual regression tests
+- Load testing
+
+**12. Accessibility & i18n**
+
+- ARIA labels and semantic HTML
+- Keyboard navigation
+- Screen reader optimization
+- High contrast mode
+- Multi-language support (i18n)
+
+---
 
 - **Database Detayları:** `database/README.md`
 - **Schema SQL:** `database/schema.sql`
