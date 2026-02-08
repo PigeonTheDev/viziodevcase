@@ -1,36 +1,171 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Vizio - Team-Based Social Media MVP
 
-## Getting Started
+Next.js 15 + Supabase ile geliştirilmiş, takım tabanlı sosyal medya platformu. Vizio AI case study projesi.
 
-First, run the development server:
+**Tech Stack:** Next.js 15, Supabase, TypeScript, Tailwind CSS
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Özellikler
+
+- ✅ **Auth:** Email/password + Google OAuth
+- ✅ **Takım Sistemi:** Her kullanıcı bir takıma ait
+- ✅ **Post Paylaşma:** Takım adına gönderi oluşturma
+- ✅ **Takip Sistemi:** Takımlar birbirini takip edebilir
+- ✅ **Global Feed:** Tüm gönderileri görüntüle (auth gerekmeden)
+- ✅ **RLS Security:** Database seviyesinde yetkilendirme
+
+---
+
+## 🗄️ Database Schema
+
+### Tablolar
+
+**`teams`** - Takım bilgileri
+
+- `id`, `name`, `handle` (unique), `created_at`
+
+**`profiles`** - User → Team mapping
+
+- `user_id` (PK), `team_id` (FK)
+- **1 user = 1 team** (PK ile enforce edilir)
+
+**`posts`** - Takım gönderileri
+
+- `id`, `team_id`, `content`, `created_at`
+- `user_id` YOK (collaborative posting)
+
+**`team_follows`** - Takip ilişkileri
+
+- `follower_team_id`, `followed_team_id`
+- Composite PK, CHECK constraint (self-follow engelleme)
+
+### RLS Policies
+
+**Güvenlik Katmanları:**
+
+1. Database (RLS policies)
+2. Backend (API validation)
+3. Middleware (route protection)
+4. Frontend (UI state)
+
+**Önemli Policies:**
+
+- `posts`: Public read, team-scoped write
+- `profiles`: Own profile read, write BLOCKED
+- `team_follows`: Team-scoped follow/unfollow
+
+**Database Constraints:**
+
+- `teams.handle`: UNIQUE constraint (duplicate handle engelleme)
+- `team_follows`: Composite PK (duplicate follow engelleme)
+- `team_follows`: CHECK constraint → `follower_team_id <> followed_team_id` (self-follow engelleme)
+- `profiles.user_id`: PK enforcement (1 user = 1 team)
+
+**Helper Function:**
+
+```sql
+my_team_id(uuid) → uuid
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Security definer function, RLS policies'de kullanılır.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Provisioning Yaklaşımı
 
-## Learn More
+**Karar:** Admin provisioning (self-signup YOK)
 
-To learn more about Next.js, take a look at the following resources:
+**Nasıl Çalışıyor:**
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Script (`scripts/provision.ts`) şu adımları takip eder:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **User Check:** Email ile mevcut auth user aranır
+   - Varsa: Mevcut user kullanılır
+   - Yoksa: Yeni auth user oluşturulur (`email_confirm: true`)
 
-## Deploy on Vercel
+2. **Team Check:** User'ın zaten team'i var mı kontrol edilir
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+   ```typescript
+   SELECT team_id, teams(name, handle) FROM profiles WHERE user_id = ?
+   ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+   - Varsa: **ERROR** - "User already belongs to team X"
+   - Yoksa: Devam edilir
+
+3. **Team Upsert:** Handle'a göre team oluşturulur/güncellenir
+
+   ```sql
+   INSERT INTO teams (name, handle) VALUES (?, ?)
+   ON CONFLICT (handle) DO UPDATE SET name = EXCLUDED.name
+   ```
+
+4. **Profile Link:** User → Team mapping oluşturulur
+
+   ```sql
+   INSERT INTO profiles (user_id, team_id) VALUES (?, ?)
+   ```
+
+   - Primary Key violation → Duplicate prevention
+
+5. **(Opsiyonel)** Demo post oluşturulur (`--post` flag)
+
+### Public Feed
+
+Feed herkes görebilir (auth gerekmez)
+
+### 5. Multi-Layer Validation
+
+**Örnek:** Self-follow prevention
+
+- Layer 1: Database CHECK constraint
+- Layer 2: API validation (`targetTeamId !== myTeamId`)
+- Layer 3: Frontend (button hidden)
+
+## 📁 Proje Yapısı
+
+```
+src/
+├── app/
+│   ├── api/              # Backend endpoints (HTTP layer)
+│   ├── login/            # Auth flow
+│   ├── teams/            # Teams page
+│   └── page.tsx          # Home feed
+├── components/           # UI components
+├── lib/
+│   ├── db/              # Data access (business logic)
+│   ├── supabase/        # Supabase clients
+│   ├── models/          # TypeScript types
+│   └── auth.ts
+├── middleware.ts        # Session + route protection
+└── globals.css
+
+database/
+└── schema.sql           # PostgreSQL schema + RLS
+
+scripts/
+└── provision.ts         # User/team provisioning
+```
+
+## Kaynaklar
+
+- **Database Detayları:** `database/README.md`
+- **Schema SQL:** `database/schema.sql`
+- **Provision Docs:** `scripts/provision.ts` (inline comments)
+
+### PDF Gereksinimleri
+
+✅ Authentication (email + Google OAuth)  
+✅ Team-based model (1 user = 1 team)  
+✅ Posts (team-owned)  
+✅ Follow system (team-to-team)  
+✅ Global feed (public)  
+✅ RLS policies  
+✅ Clean architecture  
+✅ Documented approach (provisioning)
+
+### Öne Çıkan Noktalar
+
+- **Defense in depth:** Database + Backend + Frontend validation
+- **Production patterns:** Admin provisioning, RLS, cookies
+- **Clean code:** Separation of concerns, type safety
+- **Performance:** Indexes, Server Components (SSR)
+- **Security mindset:** RLS policies, helper functions
